@@ -1,0 +1,16 @@
+# Ignore vector database
+chroma_db/
+chroma/
+
+# PDFs
+*.pdf
+
+# Python
+venv/
+__pycache__/
+
+# Node
+frontend/node_modules/
+
+# Environment variables
+.env

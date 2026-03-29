@@ -1,4 +1,5 @@
 import { BrainCircuit, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const links = [
   { label: "Features", href: "#features" },
@@ -33,9 +34,11 @@ function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <button className="hidden rounded-xl border border-slate-300 text-white bg-indigo-600 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-indigo-500 sm:inline-flex">
-            Log In
-          </button>
+          <Link to="/login">
+            <button className="hidden rounded-xl border border-slate-300 text-white bg-indigo-600 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-indigo-500 sm:inline-flex">
+              Log In
+            </button>
+          </Link>
           {/* <button className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/30 transition hover:bg-indigo-500">
             Book a Demo
           </button> */}

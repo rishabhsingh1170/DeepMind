@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BrainCircuit, Lock } from "lucide-react";
+
 
 function LoginPage() {
     const [role, setRole] = useState("employee");
@@ -26,18 +28,29 @@ function LoginPage() {
         } else {
             navigate("/employee-dashboard");
         }
-
-        // // Example logic (temporary)
-        // if (role === "admin") {
-        //     alert("Logging in as Admin");
-        // } else {
-        //     alert("Logging in as Employee");
-        // }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100">
-            <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 to-indigo-800">
+
+            {/* Top Right Sign Up */}
+            <div className="absolute top-6 right-8 text-white">
+                <span className="mr-3 text-sm">Not a member?</span>
+                <button className="border px-4 py-1 rounded hover:bg-white hover:text-black transition"
+                    onClick={() => navigate("/signup")}>
+                    Sign Up
+                </button>
+            </div>
+
+            {/* login card  */}
+            <div className="bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-lg w-96 text-white">
+
+                {/* Logo Placeholder */}
+                <div className="flex justify-center mb-8">
+                    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                        <BrainCircuit className="h-5 w-5" />
+                        <Lock className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-white p-0.5 text-indigo-700" /></div>
+                </div>
 
                 <h2 className="text-2xl font-bold text-center mb-6">
                     Login to Your Account
@@ -47,62 +60,58 @@ function LoginPage() {
 
                     {/* Role Selection */}
                     <div>
-                        <label className="block mb-1 font-medium">Select Role</label>
+                        <label className="block mb-1 font-medium">Role as: </label>
                         <div className="flex gap-4">
-                            <button
-                                type="button"
-                                onClick={() => setRole("employee")}
-                                className={`flex-1 py-2 rounded-lg border ${role === "employee"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-white text-gray-700"
-                                    }`}
-                            >
-                                Employee
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => setRole("admin")}
-                                className={`flex-1 py-2 rounded-lg border ${role === "admin"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-white text-gray-700"
-                                    }`}
-                            >
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    value="admin"
+                                    checked={role === "admin"}
+                                    onChange={(e) => setRole(e.target.value)}
+                                />
                                 Admin
-                            </button>
+                            </label>
+
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    value="employee"
+                                    checked={role === "employee"}
+                                    onChange={(e) => setRole(e.target.value)}
+                                />
+                                Employee
+                            </label>
                         </div>
                     </div>
 
                     {/* Email */}
                     <div>
-                        <label className="block mb-1 font-medium">Email</label>
                         <input
                             type="email"
-                            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            placeholder="Enter your email"
+                            placeholder="Email"
+                            className="w-full border rounded-full px-4 py-2 text-black"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            required
+                            // required
                         />
                     </div>
 
                     {/* Password */}
                     <div>
-                        <label className="block mb-1 font-medium">Password</label>
                         <input
                             type="password"
-                            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            placeholder="Enter your password"
+                            placeholder="Password"
+                            className="w-full border rounded-full px-4 py-2 text-black"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
+                            onChange={(e) => setEmail(e.target.value)}
+                            // required
                         />
                     </div>
 
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+                        className="w-full bg-indigo-800 text-white-800 py-2 rounded-full hover:bg-indigo-600 transition"
                     >
                         Login
                     </button>

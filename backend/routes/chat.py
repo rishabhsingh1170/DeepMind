@@ -22,6 +22,8 @@ try:
         ChatAccessDecision,
         ChatAccessRequestResponse,
         ChatTokenResponse,
+        ChatAccessCodeVerifyCreate,
+        ChatAccessCodeVerifyResponse,
     )
     from backend.controller.chat_controller import (
         create_chat_logic,
@@ -30,6 +32,8 @@ try:
         get_chat_by_admin_id,
         can_user_access_chat_logic,
         get_chat_token_by_admin_id,
+        create_chat_access_verification_logic,
+        validate_chat_access_verification_logic,
         request_chat_access_logic,
         list_access_requests_for_admin_logic,
         review_access_request_logic,
@@ -43,6 +47,8 @@ except ModuleNotFoundError:
         ChatAccessDecision,
         ChatAccessRequestResponse,
         ChatTokenResponse,
+        ChatAccessCodeVerifyCreate,
+        ChatAccessCodeVerifyResponse,
     )
     from controller.chat_controller import (
         create_chat_logic,
@@ -51,6 +57,8 @@ except ModuleNotFoundError:
         get_chat_by_admin_id,
         can_user_access_chat_logic,
         get_chat_token_by_admin_id,
+        create_chat_access_verification_logic,
+        validate_chat_access_verification_logic,
         request_chat_access_logic,
         list_access_requests_for_admin_logic,
         review_access_request_logic,
@@ -148,16 +156,34 @@ def get_my_chat(current_user: dict = Depends(get_current_user_from_token)):
     return get_chat_by_admin_id(admin_id)
 
 
-@router.get("/admin/token", response_model=ChatTokenResponse)
+@router.get("/admin/access-code", response_model=ChatTokenResponse)
 def get_my_chat_token(current_user: dict = Depends(get_current_user_from_token)):
     """
-    Get chat sharing token for the authenticated admin.
-    Admin shares this token with employees.
+    Get chat sharing access code for the authenticated admin.
+    Admin shares this code with employees.
     """
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can access this endpoint")
 
     return get_chat_token_by_admin_id(current_user.get("sub"))
+
+
+@router.post("/access/verify-code", response_model=ChatAccessCodeVerifyResponse)
+def verify_chat_access_code(
+    payload: ChatAccessCodeVerifyCreate,
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    """
+    Employee verifies an admin-shared access code before requesting access.
+    Returns a short-lived verification token tied to employee + chat.
+    """
+    if current_user.get("role") != "employee":
+        raise HTTPException(status_code=403, detail="Only employees can verify access code")
+
+    return create_chat_access_verification_logic(
+        employee_id=current_user.get("sub"),
+        access_code=payload.access_code,
+    )
 
 
 @router.post("/access/request", response_model=ChatAccessRequestResponse, status_code=status.HTTP_201_CREATED)
@@ -166,12 +192,18 @@ def request_chat_access(
     current_user: dict = Depends(get_current_user_from_token),
 ):
     """
-    Employee requests chat access using chat token shared by admin.
+    Employee requests chat access after verifying an admin-shared access code.
     """
     if current_user.get("role") != "employee":
         raise HTTPException(status_code=403, detail="Only employees can request chat access")
 
-    return request_chat_access_logic(current_user.get("sub"), payload.chat_token)
+    validate_chat_access_verification_logic(
+        employee_id=current_user.get("sub"),
+        chat_id=payload.chat_id,
+        verification_token=payload.verification_token,
+    )
+
+    return request_chat_access_logic(current_user.get("sub"), payload.chat_id)
 
 
 @router.get("/access/requests", response_model=list[ChatAccessRequestResponse])
@@ -226,4 +258,5 @@ def get_chat(chat_id: str, current_user: dict = Depends(get_current_user_from_to
     chat = get_chat_by_id(chat_id)
     if role == "employee":
         chat.pop("chat_token", None)
+        chat.pop("chat_access_code", None)
     return chat

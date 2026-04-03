@@ -22,3 +22,11 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 
 # OTP Configuration
 OTP_EXPIRATION_MINUTES = int(os.getenv("OTP_EXPIRATION_MINUTES", "10"))
+
+# CORS Configuration
+raw_cors_origins = os.getenv(
+	"CORS_ALLOW_ORIGINS",
+	"http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+)
+CORS_ALLOW_ORIGINS = [origin.strip() for origin in raw_cors_origins.split(",") if origin.strip()]
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"

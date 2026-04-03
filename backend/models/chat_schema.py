@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -21,7 +21,7 @@ class ChatCreate(ChatBase):
 
 class ChatInDB(ChatBase):
     id: ObjectIdStr = Field(alias="_id")
-    chat_token: str
+    chat_access_code: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -29,11 +29,11 @@ class ChatInDB(ChatBase):
 
 
 class ChatResponse(ChatInDB):
-    chat_token: Optional[str] = None
+    chat_access_code: Optional[str] = None
 
 
 class ChatAdminResponse(ChatResponse):
-    chat_token: str
+    chat_access_code: str
 
 
 class AccessRequestStatus(str, Enum):
@@ -43,7 +43,20 @@ class AccessRequestStatus(str, Enum):
 
 
 class ChatAccessRequestCreate(BaseModel):
-    chat_token: str
+    chat_id: ObjectIdStr
+    verification_token: str
+
+
+class ChatAccessCodeVerifyCreate(BaseModel):
+    access_code: str | int
+
+    @field_validator("access_code")
+    @classmethod
+    def validate_access_code(cls, value: str | int) -> str:
+        normalized = str(value).strip().upper()
+        if len(normalized) != 6 or not normalized.isalnum():
+            raise ValueError("Access code must be exactly 6 alphanumeric characters")
+        return normalized
 
 
 class ChatAccessDecisionAction(str, Enum):
@@ -70,7 +83,12 @@ class ChatAccessRequestResponse(BaseModel):
 
 class ChatTokenResponse(BaseModel):
     chat_id: ObjectIdStr
-    chat_token: str
+    access_code: str
+
+
+class ChatAccessCodeVerifyResponse(BaseModel):
+    chat_id: ObjectIdStr
+    verification_token: str
 
 
 class ChatSchema(ChatCreate):

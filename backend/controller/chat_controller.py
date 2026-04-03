@@ -5,9 +5,17 @@ Each admin can only have ONE chat assigned to ONE company.
 """
 
 import secrets
+import string
+import jwt
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+try:
+    from jwt import ExpiredSignatureError, InvalidTokenError
+except ModuleNotFoundError:
+    ExpiredSignatureError = jwt.ExpiredSignatureError
+    InvalidTokenError = jwt.InvalidTokenError
 
 try:
     from backend.database.mongo import (
@@ -19,6 +27,7 @@ try:
         chat_access_collection,
     )
     from backend.controller.cloudinary_utils import upload_document
+    from backend.config import JWT_SECRET_KEY, JWT_ALGORITHM
 except ModuleNotFoundError:
     from database.mongo import (
         chats_collection,
@@ -29,8 +38,12 @@ except ModuleNotFoundError:
         chat_access_collection,
     )
     from controller.cloudinary_utils import upload_document
+    from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
 from .utils import serialize_id
+
+
+CHAT_ACCESS_VERIFICATION_TOKEN_TTL_MINUTES = 10
 
 
 def _get_user_or_404(user_id: str) -> dict:
@@ -50,15 +63,49 @@ def _assert_role(user: dict, role: str) -> None:
         raise HTTPException(status_code=403, detail=f"Only {role}s can perform this action")
 
 
-def _generate_chat_token() -> str:
-    # URL-safe token that admins can share with employees.
-    return secrets.token_urlsafe(24)
+def _generate_chat_access_code() -> str:
+    # 6-character code that admins can share with employees.
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(6))
+
+
+def _generate_unique_chat_access_code(max_attempts: int = 10) -> str:
+    for _ in range(max_attempts):
+        candidate = _generate_chat_access_code()
+        if not chats_collection.find_one({"chat_access_code": candidate}):
+            return candidate
+
+    raise HTTPException(status_code=500, detail="Unable to generate a unique access code")
+
+
+def _normalize_access_code(access_code: str | int) -> str:
+    normalized = str(access_code).strip().upper()
+    if len(normalized) != 6 or not normalized.isalnum():
+        raise HTTPException(status_code=400, detail="Access code must be exactly 6 alphanumeric characters")
+    return normalized
 
 
 def _hide_chat_token(chat: dict) -> dict:
     chat_data = serialize_id(chat)
     chat_data.pop("chat_token", None)
+    chat_data.pop("chat_access_code", None)
     return chat_data
+
+
+def _ensure_chat_access_code(chat: dict) -> dict:
+    """
+    Ensure legacy chats always have a 6-character access code.
+    """
+    if chat.get("chat_access_code"):
+        return chat
+
+    generated_code = _generate_unique_chat_access_code()
+    chats_collection.update_one(
+        {"_id": chat["_id"]},
+        {"$set": {"chat_access_code": generated_code, "updated_at": datetime.utcnow()}},
+    )
+    chat["chat_access_code"] = generated_code
+    return chat
 
 
 def create_chat_logic(
@@ -129,7 +176,7 @@ def create_chat_logic(
         "admin_id": admin_id,
         "company_id": company_id,
         "document_id": document_id,
-        "chat_token": _generate_chat_token(),
+        "chat_access_code": _generate_unique_chat_access_code(),
         "created_at": now,
         "updated_at": now
     }
@@ -223,29 +270,101 @@ def get_chat_by_admin_id(admin_id: str) -> dict:
     if not chat:
         raise HTTPException(status_code=404, detail="No chat found for this admin")
     
+    chat = _ensure_chat_access_code(chat)
     return serialize_id(chat)
 
 
 def get_chat_token_by_admin_id(admin_id: str) -> dict:
     """
-    Return chat token for the admin's chat.
+    Return access code for the admin's chat.
     """
-    chat = get_chat_by_admin_id(admin_id)
-    return {"chat_id": chat["_id"], "chat_token": chat["chat_token"]}
+    chat = chats_collection.find_one({"admin_id": admin_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="No chat found for this admin")
+
+    chat = _ensure_chat_access_code(chat)
+    return {"chat_id": str(chat["_id"]), "access_code": chat["chat_access_code"]}
 
 
-def request_chat_access_logic(employee_id: str, chat_token: str) -> dict:
+def verify_chat_access_code_logic(access_code: str | int) -> dict:
     """
-    Employee requests access to a chat by shared chat token.
+    Validate an admin-provided access code and return the target chat id.
+    """
+    normalized = _normalize_access_code(access_code)
+    chat = chats_collection.find_one({"chat_access_code": normalized})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Invalid access code")
+
+    return {"chat_id": str(chat["_id"]), "admin_id": chat["admin_id"]}
+
+
+def create_chat_access_verification_logic(employee_id: str, access_code: str | int) -> dict:
+    """
+    Verify access code and issue a short-lived verification token.
+    """
+    verification_data = verify_chat_access_code_logic(access_code)
+
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=CHAT_ACCESS_VERIFICATION_TOKEN_TTL_MINUTES)
+    verification_token_payload = {
+        "sub": employee_id,
+        "chat_id": verification_data["chat_id"],
+        "type": "chat_access_verification",
+        "exp": int(expires_at.timestamp()),
+    }
+    verification_token = jwt.encode(
+        verification_token_payload,
+        JWT_SECRET_KEY,
+        algorithm=JWT_ALGORITHM,
+    )
+
+    return {
+        "chat_id": verification_data["chat_id"],
+        "verification_token": verification_token,
+    }
+
+
+def validate_chat_access_verification_logic(employee_id: str, chat_id: str, verification_token: str) -> None:
+    """
+    Validate verification token before creating an access request.
+    """
+    try:
+        verification_payload = jwt.decode(
+            verification_token,
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Verification token has expired")
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid verification token")
+
+    if verification_payload.get("type") != "chat_access_verification":
+        raise HTTPException(status_code=401, detail="Invalid verification token type")
+
+    if verification_payload.get("sub") != employee_id:
+        raise HTTPException(status_code=403, detail="Verification token does not belong to current employee")
+
+    if verification_payload.get("chat_id") != chat_id:
+        raise HTTPException(status_code=400, detail="Verified chat does not match requested chat")
+
+
+def request_chat_access_logic(employee_id: str, chat_id: str) -> dict:
+    """
+    Employee requests access to a specific chat.
     """
     employee_user = _get_user_or_404(employee_id)
     _assert_role(employee_user, "employee")
 
-    chat = chats_collection.find_one({"chat_token": chat_token})
-    if not chat:
-        raise HTTPException(status_code=404, detail="Invalid chat token")
+    try:
+        chat_object_id = ObjectId(chat_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid chat ID format")
 
-    chat_id = str(chat["_id"])
+    chat = chats_collection.find_one({"_id": chat_object_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    chat_id = str(chat_object_id)
     admin_id = chat["admin_id"]
 
     already_granted = chat_access_collection.find_one({"chat_id": chat_id, "employee_id": employee_id})

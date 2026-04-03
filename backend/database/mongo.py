@@ -22,6 +22,7 @@ try:
     # Create unique index on chats to enforce one chat per admin
     chats_collection.create_index([("admin_id", 1)], unique=True)
     chats_collection.create_index([("chat_token", 1)], unique=True)
+    chats_collection.create_index([("chat_access_code", 1)], unique=True, sparse=True)
 
     # Keep one active request record per chat/employee pair.
     chat_access_requests_collection.create_index(

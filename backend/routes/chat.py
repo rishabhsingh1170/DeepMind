@@ -24,6 +24,9 @@ try:
         ChatTokenResponse,
         ChatAccessCodeVerifyCreate,
         ChatAccessCodeVerifyResponse,
+        ChatAskRequest,
+        ChatAskResponse,
+        ChatDeleteResponse,
     )
     from backend.controller.chat_controller import (
         create_chat_logic,
@@ -37,6 +40,8 @@ try:
         request_chat_access_logic,
         list_access_requests_for_admin_logic,
         review_access_request_logic,
+        ask_chat_logic,
+        delete_chat_logic,
     )
     from backend.config import JWT_SECRET_KEY, JWT_ALGORITHM
 except ModuleNotFoundError:
@@ -49,6 +54,9 @@ except ModuleNotFoundError:
         ChatTokenResponse,
         ChatAccessCodeVerifyCreate,
         ChatAccessCodeVerifyResponse,
+        ChatAskRequest,
+        ChatAskResponse,
+        ChatDeleteResponse,
     )
     from controller.chat_controller import (
         create_chat_logic,
@@ -62,6 +70,8 @@ except ModuleNotFoundError:
         request_chat_access_logic,
         list_access_requests_for_admin_logic,
         review_access_request_logic,
+        ask_chat_logic,
+        delete_chat_logic,
     )
     from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
@@ -260,3 +270,35 @@ def get_chat(chat_id: str, current_user: dict = Depends(get_current_user_from_to
         chat.pop("chat_token", None)
         chat.pop("chat_access_code", None)
     return chat
+
+
+@router.post("/{chat_id}/ask", response_model=ChatAskResponse)
+def ask_chat(
+    chat_id: str,
+    payload: ChatAskRequest,
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    """
+    Ask the chat bot a question about the linked policy document.
+    """
+    return ask_chat_logic(
+        chat_id=chat_id,
+        user_id=current_user.get("sub"),
+        role=current_user.get("role"),
+        question=payload.question,
+        top_k=payload.top_k,
+    )
+
+
+@router.delete("/{chat_id}", response_model=ChatDeleteResponse)
+def delete_chat(
+    chat_id: str,
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    """
+    Delete an admin's chat and all related resources.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete chats")
+
+    return delete_chat_logic(current_user.get("sub"), chat_id)

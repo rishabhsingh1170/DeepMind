@@ -86,6 +86,36 @@ class ChatTokenResponse(BaseModel):
     access_code: str
 
 
+class ChatSourceResponse(BaseModel):
+    chunk_id: str
+    document_id: ObjectIdStr
+    document_name: str
+    document_url: Optional[str] = None
+    chunk_index: int
+    excerpt: str
+    score: float
+
+
+class ChatAskRequest(BaseModel):
+    question: str = Field(min_length=1)
+    top_k: int = Field(default=4, ge=1, le=10)
+
+
+class ChatAskResponse(BaseModel):
+    chat_id: ObjectIdStr
+    company_id: ObjectIdStr
+    document_id: ObjectIdStr
+    question: str
+    answer: str
+    sources: list[ChatSourceResponse]
+
+
+class ChatDeleteResponse(BaseModel):
+    chat_id: ObjectIdStr
+    document_id: ObjectIdStr
+    message: str
+
+
 class ChatAccessCodeVerifyResponse(BaseModel):
     chat_id: ObjectIdStr
     verification_token: str

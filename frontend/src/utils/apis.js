@@ -1,4 +1,3 @@
-
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -80,6 +79,14 @@ export const APIS = {
     // GET /chats/{chat_id}
     // Auth required and permission-gated on backend.
     BY_ID: (chatId) => `/chats/${chatId}`,
+
+    // POST /chats/{chat_id}/ask
+    // Auth required. Body: { question, top_k? }
+    ASK: (chatId) => `/chats/${chatId}/ask`,
+
+    // DELETE /chats/{chat_id}
+    // Admin only.
+    DELETE: (chatId) => `/chats/${chatId}`,
   },
 };
 

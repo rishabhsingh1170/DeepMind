@@ -1,11 +1,6 @@
 import { BrainCircuit, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const links = [
-  { label: "Features", href: "#features" },
-  { label: "Security", href: "#security" },
-  { label: "How it Works", href: "#how-it-works" },
-];
+import { navLinks } from "./landingPageConstants";
 
 function Navbar() {
   return (
@@ -22,7 +17,7 @@ function Navbar() {
         </a>
 
         <nav className="hidden items-center gap-8 md:flex">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
@@ -46,9 +41,6 @@ function Navbar() {
           >
             Get Started
           </Link>
-          {/* <button className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/30 transition hover:bg-indigo-500">
-            Book a Demo
-          </button> */}
         </div>
       </div>
     </header>

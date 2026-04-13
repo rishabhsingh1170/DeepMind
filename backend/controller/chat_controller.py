@@ -126,6 +126,20 @@ def generate_unique_chat_access_code(max_attempts: int = 10) -> str:
     raise HTTPException(status_code=500, detail="Unable to generate a unique access code")
 
 
+def generate_chat_token() -> str:
+    # URL-safe token for internal chat uniqueness/indexing.
+    return secrets.token_urlsafe(32)
+
+
+def generate_unique_chat_token(max_attempts: int = 10) -> str:
+    for _ in range(max_attempts):
+        candidate = generate_chat_token()
+        if not chats_collection.find_one({"chat_token": candidate}):
+            return candidate
+
+    raise HTTPException(status_code=500, detail="Unable to generate a unique chat token")
+
+
 def normalize_access_code(access_code: str | int) -> str:
     normalized = str(access_code).strip().upper()
     if len(normalized) != 6 or not normalized.isalnum():
@@ -249,6 +263,7 @@ def create_chat_logic(
                 "admin_id": admin_id,
                 "company_id": company_id,
                 "document_id": document_id,
+                "chat_token": generate_unique_chat_token(),
                 "chat_access_code": generate_unique_chat_access_code(),
                 "created_at": now,
                 "updated_at": now
@@ -256,6 +271,11 @@ def create_chat_logic(
 
             result = chats_collection.insert_one(chat_record)
             chat_record["_id"] = str(result.inserted_id)
+
+            users_collection.update_one(
+                {"_id": ObjectId(admin_id)},
+                {"$set": {"company_id": company_id}},
+            )
 
             return chat_record
         except Exception:
@@ -623,7 +643,54 @@ def ask_chat_logic(chat_id: str, user_id: str, role: str, question: str, top_k: 
         "document_id": document_id,
         "question": question,
         "answer": answer,
-        "sources": sources,
+    }
+
+
+def revoke_chat_access_logic(admin_id: str, chat_id: str, employee_id: str) -> dict:
+    """
+    Revoke a specific employee's access to a chat (admin only).
+    Removes granted access links and marks approved requests as denied.
+    """
+    admin_user = get_user_or_404(admin_id)
+    assert_role(admin_user, "admin")
+
+    chat = get_chat_or_404(chat_id)
+    if chat.get("admin_id") != admin_id:
+        raise HTTPException(status_code=403, detail="You can only manage access for your own chat")
+
+    employee_user = get_user_or_404(employee_id)
+    assert_role(employee_user, "employee")
+
+    now = datetime.utcnow()
+
+    deleted_access_links = chat_access_collection.delete_many(
+        {"chat_id": chat_id, "employee_id": employee_id}
+    ).deleted_count
+
+    updated_requests = chat_access_requests_collection.update_many(
+        {
+            "chat_id": chat_id,
+            "employee_id": employee_id,
+            "status": "approved",
+        },
+        {
+            "$set": {
+                "status": "denied",
+                "reviewed_at": now,
+                "reviewed_by": admin_id,
+            }
+        },
+    ).modified_count
+
+    if deleted_access_links == 0 and updated_requests == 0:
+        raise HTTPException(status_code=404, detail="No active access found for this employee in the selected chat")
+
+    return {
+        "chat_id": chat_id,
+        "employee_id": employee_id,
+        "message": "Employee access revoked successfully",
+        "removed_access_links": deleted_access_links,
+        "updated_access_requests": updated_requests,
     }
 
 

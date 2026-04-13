@@ -1,10 +1,5 @@
-import { Shield, ServerCog, DatabaseZap, CheckCircle2 } from "lucide-react";
-
-const securityPoints = [
-  "Role-Based Access Control (RBAC) for admins and users.",
-  "Enterprise-grade inference powered by the secure Mistral API, ensuring your data is never used for model training.",
-  "Encrypted ChromaDB vector storage with tenant-scoped retrieval.",
-];
+import { Shield, CheckCircle2 } from "lucide-react";
+import { securityPoints } from "./landingPageConstants";
 
 function SecuritySection() {
   return (
@@ -36,36 +31,6 @@ function SecuritySection() {
               ))}
             </ul>
           </div>
-
-          {/* <div className="section-reveal stagger-1 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <ServerCog className="h-8 w-8 text-indigo-300" />
-              <h3 className="mt-4 text-lg font-bold text-white">
-                Deployment Flexibility
-              </h3>
-              <p className="mt-2 text-sm text-slate-300">
-                Cloud, private VPC, or fully offline environments.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <DatabaseZap className="h-8 w-8 text-indigo-300" />
-              <h3 className="mt-4 text-lg font-bold text-white">
-                Encrypted Vectors
-              </h3>
-              <p className="mt-2 text-sm text-slate-300">
-                Secure storage and audited data access paths.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:col-span-2">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Built for CIO and IT teams
-              </p>
-              <p className="mt-2 text-sm text-slate-200">
-                Every response can include source citations so your teams can
-                verify before acting.
-              </p>
-            </div>
-          </div> */}
         </div>
       </div>
     </section>

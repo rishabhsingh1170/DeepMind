@@ -27,6 +27,7 @@ try:
         ChatAskRequest,
         ChatAskResponse,
         ChatDeleteResponse,
+        ChatAccessRevokeResponse,
     )
     from backend.controller.chat_controller import (
         create_chat_logic,
@@ -42,6 +43,7 @@ try:
         review_access_request_logic,
         ask_chat_logic,
         delete_chat_logic,
+        revoke_chat_access_logic,
     )
     from backend.config import JWT_SECRET_KEY, JWT_ALGORITHM
 except ModuleNotFoundError:
@@ -57,6 +59,7 @@ except ModuleNotFoundError:
         ChatAskRequest,
         ChatAskResponse,
         ChatDeleteResponse,
+        ChatAccessRevokeResponse,
     )
     from controller.chat_controller import (
         create_chat_logic,
@@ -72,6 +75,7 @@ except ModuleNotFoundError:
         review_access_request_logic,
         ask_chat_logic,
         delete_chat_logic,
+        revoke_chat_access_logic,
     )
     from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
@@ -272,7 +276,7 @@ def get_chat(chat_id: str, current_user: dict = Depends(get_current_user_from_to
     return chat
 
 
-@router.post("/{chat_id}/ask", response_model=ChatAskResponse)
+@router.post("/{chat_id}/ask", response_model=ChatAskResponse, response_model_exclude_none=True)
 def ask_chat(
     chat_id: str,
     payload: ChatAskRequest,
@@ -302,3 +306,18 @@ def delete_chat(
         raise HTTPException(status_code=403, detail="Only admins can delete chats")
 
     return delete_chat_logic(current_user.get("sub"), chat_id)
+
+
+@router.delete("/{chat_id}/access/{employee_id}", response_model=ChatAccessRevokeResponse)
+def revoke_chat_access(
+    chat_id: str,
+    employee_id: str,
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    """
+    Revoke a specific employee's access to an admin's chat.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can revoke chat access")
+
+    return revoke_chat_access_logic(current_user.get("sub"), chat_id, employee_id)

@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import Footer from "./Footer";
+
 function FinalCtaSection() {
   return (
     <>
@@ -12,34 +15,17 @@ function FinalCtaSection() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <button className="rounded-2xl bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50">
+            <Link
+              to="/signup"
+              className="rounded-2xl bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
+            >
               Let's Start
-            </button>
-            {/* <button className="rounded-2xl border border-indigo-200/60 bg-indigo-500/20 px-6 py-3 text-sm font-bold text-white transition hover:bg-indigo-500/35">
-              Book a Demo
-            </button> */}
+            </Link>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white/80 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-slate-500 sm:flex-row">
-          <p>
-            (c) {new Date().getFullYear()} DocuMind AI. All rights reserved.
-          </p>
-          <div className="flex gap-6">
-            <a href="#" className="transition hover:text-slate-700">
-              Privacy
-            </a>
-            <a href="#" className="transition hover:text-slate-700">
-              Terms
-            </a>
-            <a href="#" className="transition hover:text-slate-700">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

@@ -57,6 +57,9 @@ def list_documents(current_user: dict = Depends(get_current_user_from_token)):
     Returns:
         List of all documents
     """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can view documents")
+
     company_id = current_user.get("company_id")
     user_id = current_user.get("sub")
     return list_documents_logic(company_id=company_id, uploaded_by=user_id)

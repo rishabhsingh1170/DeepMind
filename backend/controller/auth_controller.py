@@ -7,19 +7,40 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import HTTPException
+from bson import ObjectId
 
 try:
-    from backend.database.mongo import users_collection
+    from backend.database.mongo import users_collection, companies_collection
     from backend.models.user_schema import UserCreate
     from backend.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRES_MINUTES
     from backend.controller.email_utils import send_otp_email, verify_otp
 except ModuleNotFoundError:
-    from database.mongo import users_collection
+    from database.mongo import users_collection, companies_collection
     from models.user_schema import UserCreate
     from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRES_MINUTES
     from controller.email_utils import send_otp_email, verify_otp
 
 from .utils import verify_password, hash_password
+
+
+def _resolve_company_name(company_id: str | None) -> str | None:
+    """
+    Resolve company name from company_id.
+    Returns None when company is not assigned or lookup fails.
+    """
+    if not company_id:
+        return None
+
+    try:
+        company_obj_id = ObjectId(company_id)
+    except Exception:
+        return None
+
+    company = companies_collection.find_one({"_id": company_obj_id}, {"company_name": 1})
+    if not company:
+        return None
+
+    return company.get("company_name")
 
 
 def _create_access_token(user_id: str, email: str, role: str, company_id: str = None) -> str:
@@ -47,6 +68,7 @@ def _build_auth_response(user: dict, message: str) -> dict:
     """
     user_id = str(user["_id"])
     company_id = user.get("company_id")  # May be None for newly registered users
+    company_name = _resolve_company_name(company_id)
     access_token = _create_access_token(
         user_id=user_id,
         email=user["email"],
@@ -65,6 +87,7 @@ def _build_auth_response(user: dict, message: str) -> dict:
             "email": user["email"],
             "role": user["role"],
             "company_id": company_id,
+            "company_name": company_name,
             "profile_url": user.get("profile_url"),
         },
     }

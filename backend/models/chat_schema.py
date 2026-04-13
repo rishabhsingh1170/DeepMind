@@ -107,13 +107,21 @@ class ChatAskResponse(BaseModel):
     document_id: ObjectIdStr
     question: str
     answer: str
-    sources: list[ChatSourceResponse]
+    sources: list[ChatSourceResponse] | None = None
 
 
 class ChatDeleteResponse(BaseModel):
     chat_id: ObjectIdStr
     document_id: ObjectIdStr
     message: str
+
+
+class ChatAccessRevokeResponse(BaseModel):
+    chat_id: ObjectIdStr
+    employee_id: ObjectIdStr
+    message: str
+    removed_access_links: int
+    updated_access_requests: int
 
 
 class ChatAccessCodeVerifyResponse(BaseModel):

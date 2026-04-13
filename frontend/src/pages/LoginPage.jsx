@@ -1,65 +1,67 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Loader2,
+  ShieldCheck,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import AuthLayout from "../components/auth/AuthLayout";
 import AuthInput from "../components/auth/AuthInput";
-import apiClient from "../utils/apiClient";
-import { APIS } from "../utils/apis";
+import { authAPI, setAuthData } from "../utils/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 const initialForm = { workEmail: "", password: "" };
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState(initialForm);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setIsSuccess(false);
     setError("");
+    setIsSuccess(false);
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((value) => !value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setIsSuccess(false);
     setError("");
+    setIsSuccess(false);
 
     try {
-      const payload = {
-        email: formData.workEmail,
-        password: formData.password,
-      };
+      // Call backend login endpoint
+      const response = await authAPI.login(
+        formData.workEmail,
+        formData.password,
+      );
 
-      const res = await apiClient.post(APIS.AUTH.LOGIN, payload);
+      // Store auth data in localStorage
+      setAuthData(response);
 
-      const data = res.data;
-
-      if (data?.access_token) {
-        localStorage.setItem("token", data.access_token);
-      }
-
-      if (data?.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("role", data.user.role || "");
-      }
+      // Update AuthContext state
+      login(response);
 
       setIsSuccess(true);
-
+      // Redirect to dashboard after short delay
       setTimeout(() => {
-        navigate("/home");
-      }, 1000);
+        navigate("/dashboard");
+      }, 1200);
     } catch (err) {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        "Login failed. Please check your email and password.";
-
-      setError(message);
-      setIsSuccess(false);
+      setError(err.message || "Login failed. Please try again.");
+      console.error("Login error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -91,17 +93,33 @@ export default function LoginPage() {
           value={formData.workEmail}
           onChange={handleChange}
           placeholder="you@company.com"
-          // autoComplete="email"
+          autoComplete="email"
+          required
         />
 
         <AuthInput
           id="password"
           label="Password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           value={formData.password}
           onChange={handleChange}
           placeholder="••••••••"
-          // autoComplete="current-password"
+          autoComplete="current-password"
+          required
+          trailingAction={
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="inline-flex items-center justify-center text-slate-500 transition hover:text-slate-700"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          }
         />
 
         <div className="flex items-center justify-end">
@@ -127,15 +145,16 @@ export default function LoginPage() {
         </button>
 
         {/* SSO */}
-        <button
+        {/* <button
           type="button"
           className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
         >
-          Sign in with Google
-        </button>
+          Sign in with Microsoft / Google
+        </button> */}
 
         {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+          <p className="inline-flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             {error}
           </p>
         )}

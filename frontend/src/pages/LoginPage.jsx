@@ -123,12 +123,12 @@ export default function LoginPage() {
         />
 
         <div className="flex items-center justify-end">
-          <button
-            type="button"
+          <Link
+            to="/forgot-password"
             className="text-sm font-medium text-indigo-600 transition hover:text-indigo-500"
           >
             Forgot your password?
-          </button>
+          </Link>
         </div>
 
         <button

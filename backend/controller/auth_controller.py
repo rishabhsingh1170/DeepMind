@@ -208,3 +208,71 @@ def verify_otp_and_signup_logic(email: str, otp: str, payload: UserCreate) -> di
     created["_id"] = str(result.inserted_id)
     
     return _build_auth_response(created, "Signup successful.")
+
+
+def send_forgot_password_otp_logic(email: str) -> dict:
+    """
+    Send OTP to an already-registered email for password reset.
+
+    Args:
+        email: Registered user email
+
+    Returns:
+        Response with message and expiration time
+
+    Raises:
+        HTTPException: 404 if user not found
+        HTTPException: 500 if OTP email sending fails
+    """
+    existing_user = users_collection.find_one({"email": email})
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User with this email does not exist")
+
+    try:
+        result = send_otp_email(email)
+        return {
+            "message": result["message"],
+            "email": email,
+            "expires_in": result["expiration_minutes"] * 60,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send OTP: {str(e)}")
+
+
+def reset_password_with_otp_logic(email: str, otp: str, new_password: str) -> dict:
+    """
+    Verify OTP and reset user password.
+
+    Args:
+        email: Registered user email
+        otp: OTP code sent to user email
+        new_password: New plain-text password
+
+    Returns:
+        Success response
+
+    Raises:
+        HTTPException: 404 if user not found
+        HTTPException: 400 if OTP invalid/expired or password unchanged
+    """
+    user = users_collection.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User with this email does not exist")
+
+    try:
+        verify_otp(email, otp)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if verify_password(new_password, user["password_hash"]):
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be different from current password",
+        )
+
+    users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"password_hash": hash_password(new_password)}},
+    )
+
+    return {"message": "Password reset successful"}

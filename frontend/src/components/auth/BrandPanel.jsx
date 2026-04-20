@@ -1,4 +1,4 @@
-import { Building2, Sparkles } from "lucide-react";
+import { BrainCircuit, Building2, Lock, Sparkles } from "lucide-react";
 
 export default function BrandPanel() {
   return (
@@ -12,13 +12,15 @@ export default function BrandPanel() {
 
         <div className="space-y-6">
           <h2 className="max-w-xl text-3xl font-semibold leading-tight text-white lg:text-4xl">
-            Join  with
-            DocuMind AI.
+            Join with DocuMind AI.
           </h2>
+          <div className="relative flex h-60 w-80 items-center justify-center rounded-2xl  text-white shadow-lg shadow-indigo-500/30">
+            <BrainCircuit className="h-60 w-80" />
+            <Lock className="absolute -right-1 -top-1 h-10 w-10 rounded-full bg-white p-0.5 text-indigo-700" />
+          </div>
           <p className="max-w-lg text-sm text-slate-300 lg:text-base">
             "DocuMind AI helped us launch isolated knowledge workspaces per
-            business unit in under two weeks while improving access governance
-            and traceability."
+            business unit."
           </p>
           <div className="inline-flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/30 text-indigo-100">

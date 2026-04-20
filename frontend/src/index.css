@@ -38,6 +38,15 @@ body {
   animation-delay: 0.24s;
 }
 
+.chat-scroll-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.chat-scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes sectionReveal {
   from {
     opacity: 0;

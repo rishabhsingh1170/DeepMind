@@ -196,6 +196,28 @@ export const authAPI = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+
+  /**
+   * Send OTP for forgot-password flow
+   */
+  sendForgotPasswordOTP: (email) =>
+    fetchWithAuth("/auth/forgot-password/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  /**
+   * Verify OTP and reset password
+   */
+  resetPasswordWithOTP: (email, otp, newPassword) =>
+    fetchWithAuth("/auth/forgot-password/reset", {
+      method: "POST",
+      body: JSON.stringify({
+        email: String(email || "").trim(),
+        otp: String(otp || "").trim(),
+        new_password: newPassword,
+      }),
+    }),
 };
 
 // ==================== User API Endpoints ====================

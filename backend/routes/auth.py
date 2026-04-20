@@ -4,14 +4,26 @@ Endpoints for authentication: signup, login.
 """
 
 from fastapi import APIRouter, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 try:
-    from backend.controller.auth_controller import login_logic, send_otp_logic, verify_otp_and_signup_logic
+    from backend.controller.auth_controller import (
+        login_logic,
+        send_otp_logic,
+        verify_otp_and_signup_logic,
+        send_forgot_password_otp_logic,
+        reset_password_with_otp_logic,
+    )
     from backend.models.user_schema import UserCreate
     from backend.models.otp_schema import OTPCreate
 except ModuleNotFoundError:
-    from controller.auth_controller import login_logic, send_otp_logic, verify_otp_and_signup_logic
+    from controller.auth_controller import (
+        login_logic,
+        send_otp_logic,
+        verify_otp_and_signup_logic,
+        send_forgot_password_otp_logic,
+        reset_password_with_otp_logic,
+    )
     from models.user_schema import UserCreate
     from models.otp_schema import OTPCreate
 
@@ -105,6 +117,13 @@ class VerifyOTPAndSignupRequest(BaseModel):
     company_id: str = None
 
 
+class ForgotPasswordResetRequest(BaseModel):
+    """Request body for verifying OTP and resetting password."""
+    email: EmailStr
+    otp: str
+    new_password: str = Field(min_length=8)
+
+
 @router.post("/verify-otp-and-signup", status_code=status.HTTP_201_CREATED)
 def verify_otp_and_signup(payload: VerifyOTPAndSignupRequest):
     """
@@ -131,3 +150,35 @@ def verify_otp_and_signup(payload: VerifyOTPAndSignupRequest):
     )
     
     return verify_otp_and_signup_logic(payload.email, payload.otp, user_create)
+
+
+@router.post("/forgot-password/send-otp", status_code=status.HTTP_200_OK)
+def send_forgot_password_otp(payload: OTPCreate):
+    """
+    Send OTP for forgot-password flow.
+
+    Args:
+        payload: Email to receive reset OTP
+
+    Returns:
+        Response with message and OTP expiration time
+    """
+    return send_forgot_password_otp_logic(payload.email)
+
+
+@router.post("/forgot-password/reset", status_code=status.HTTP_200_OK)
+def reset_password_with_otp(payload: ForgotPasswordResetRequest):
+    """
+    Verify OTP and reset password.
+
+    Args:
+        payload: Email, OTP and new password
+
+    Returns:
+        Password reset success response
+    """
+    return reset_password_with_otp_logic(
+        email=payload.email,
+        otp=payload.otp,
+        new_password=payload.new_password,
+    )

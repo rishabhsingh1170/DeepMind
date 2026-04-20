@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Bot, Loader2, MessageSquareText, Send } from "lucide-react";
 import { chatAPI } from "../utils/apiClient";
@@ -17,7 +17,7 @@ function formatDate(value) {
   return parsed.toLocaleString();
 }
 
-function MessageBubble({ role, text, createdAt }) {
+function MessageBubble({ role, text, createdAt, isThinking = false }) {
   const isUser = role === "user";
 
   return (
@@ -37,7 +37,11 @@ function MessageBubble({ role, text, createdAt }) {
           )}
           <span>{isUser ? "You" : "Assistant"}</span>
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-6">{text}</p>
+        <p
+          className={`whitespace-pre-wrap break-words text-sm leading-6 ${isThinking ? "animate-pulse italic" : ""}`}
+        >
+          {text}
+        </p>
         {createdAt && (
           <p
             className={`mt-2 text-xs ${isUser ? "text-indigo-100" : "text-slate-500"}`}
@@ -66,6 +70,7 @@ export default function ChatPage() {
   const [question, setQuestion] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [conversation, setConversation] = useState([]);
+  const messagesEndRef = useRef(null);
 
   const assistantLabel = user?.company_name?.trim()
     ? `${user.company_name.trim()} Assistant`
@@ -134,6 +139,13 @@ export default function ChatPage() {
     }
   }, [chatId]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [conversation, isSending]);
+
   const handleSendQuestion = async (e) => {
     e.preventDefault();
 
@@ -174,11 +186,11 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
+    <div className="h-[100dvh] overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.25),_transparent_35%)]" />
 
-      <div className="relative mx-auto max-w-5xl px-6 py-8">
-        <div className="mb-4">
+      <div className="relative mx-auto flex h-full max-w-5xl min-h-0 flex-col overflow-x-hidden px-4 py-4 sm:px-6 sm:py-8">
+        <div className="mb-3 sm:mb-4">
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
@@ -188,7 +200,7 @@ export default function ChatPage() {
           </Link>
         </div>
 
-        <main className="h-[calc(100vh-140px)] overflow-hidden rounded-3xl border border-white/15 bg-white text-slate-900 shadow-2xl">
+        <main className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-white/15 bg-white text-slate-900 shadow-2xl sm:rounded-3xl">
           {isLoadingChats ||
           isLoadingChat ||
           (chatId && !activeChat && !chatError) ? (
@@ -224,7 +236,7 @@ export default function ChatPage() {
                 </h1>
               </div>
 
-              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-4 py-6 sm:px-8">
+              <div className="chat-scroll-hidden flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-8 sm:py-6">
                 {conversation.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
                     <MessageSquareText className="mx-auto h-6 w-6 text-slate-500" />
@@ -242,26 +254,34 @@ export default function ChatPage() {
                         createdAt={message.createdAt}
                       />
                     ))}
+                    {isSending && (
+                      <MessageBubble
+                        role="assistant"
+                        text="Thinking..."
+                        isThinking
+                      />
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>
 
               <div className="border-t border-slate-200 bg-white px-4 py-4 sm:px-8">
                 <form onSubmit={handleSendQuestion} className="space-y-3">
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-row items-end gap-2">
                     <textarea
                       value={question}
                       onChange={(e) => setQuestion(e.target.value)}
                       placeholder="Type your question..."
-                      rows={4}
-                      className="min-h-[132px] flex-1 resize-none rounded-2xl border border-slate-300 px-5 py-4 text-base text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      rows={1}
+                      className="min-h-[44px] max-h-[96px] flex-1 resize-y rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                     />
                     <button
                       type="submit"
                       disabled={
                         !question.trim() || isSending || !activeChat?._id
                       }
-                      className="inline-flex min-h-[132px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-4 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[170px]"
+                      className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[140px]"
                     >
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

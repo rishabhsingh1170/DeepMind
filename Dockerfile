@@ -16,7 +16,8 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV CHROMA_DB_PATH=/app/chroma_db
-ENV PORT=8000
+# Need this port for the FastAPI server
+ENV PORT=7860 
 
 WORKDIR /app
 
@@ -32,7 +33,7 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 RUN mkdir -p /app/chroma_db
 
-EXPOSE 8000
+EXPOSE 7860
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f "http://127.0.0.1:${PORT}/" || exit 1

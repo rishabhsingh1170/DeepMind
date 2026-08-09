@@ -5,6 +5,12 @@ except ModuleNotFoundError:
     from config import MONGO_URI
 
 try:
+    if not MONGO_URI:
+        raise RuntimeError(
+            "MONGO_URI is not set. Pass it with --env-file backend/.env "
+            "or set it in the container environment."
+        )
+
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     db = client["DocMindCluster"]
 

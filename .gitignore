@@ -27,3 +27,5 @@ chroma_db/
 Thumbs.db
 
 *.pdf
+
+backup-repo.git/

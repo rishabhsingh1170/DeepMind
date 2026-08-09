@@ -13,15 +13,32 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.DOCMIND_GITHUB_DEPLOY }}
         run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
+          # Remove nested Git repository
+          rm -rf backup-repo.git
 
+          # Remove GitHub repository history
+          rm -rf .git
+
+          # Create a fresh Git repository
+          git init
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git branch -M main
+
+          # Add current project files only
+          git add .
+
+          # Create fresh commit
+          git commit -m "Deploy DocMind to Hugging Face"
+
+          # Add Hugging Face remote
           git remote add hf https://user:${HF_TOKEN}@huggingface.co/spaces/rishabh1170/DocMind
 
+          # Push clean repository
           git push hf main --force
